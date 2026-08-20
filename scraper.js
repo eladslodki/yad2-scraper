@@ -43,20 +43,17 @@ const getYad2Response = async (targetUrl) => {
         return null;
     }
 
-    // שימוש בפרמטר ultra_premium=true ו-keep_headers לעקיפת Radware
-    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&ultra_premium=true`;
+    // שימוש ב-anti_bot=true הנתמך בחשבונות חינמיים/רגילים לעקיפת Radware
+    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&anti_bot=true`;
 
     try {
-        console.log("Fetching Yad2 page via ScraperAPI (Ultra Premium)...");
-        const res = await fetch(proxyUrl, {
-            headers: {
-                "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            }
-        });
+        console.log("Fetching Yad2 page via ScraperAPI (Anti-Bot Enabled)...");
+        const res = await fetch(proxyUrl);
 
         if (!res.ok) {
             console.error(`ScraperAPI returned status: ${res.status}`);
+            const errText = await res.text();
+            console.error("Response details:", errText.substring(0, 200));
             return null;
         }
 
