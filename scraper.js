@@ -36,22 +36,22 @@ const sendToRailwayAPI = async (imgUrl, topic, pageUrl) => {
 };
 
 const getYad2Response = async (targetUrl) => {
-    const scraperApiKey = process.env.SCRAPER_API_KEY;
+    const apiKey = process.env.SCRAPER_API_KEY; // המפתח מ-ZenRows
 
-    if (!scraperApiKey) {
-        console.error("⚠️ SCRAPER_API_KEY is missing in environment variables!");
+    if (!apiKey) {
+        console.error("⚠️ SCRAPER_API_KEY is missing!");
         return null;
     }
 
-    // שימוש ב-anti_bot=true הנתמך בחשבונות חינמיים/רגילים לעקיפת Radware
-    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&anti_bot=true`;
+    // ZenRows משתמש ב-antibot=true וב-js_render=true לעקיפת Radware
+    const proxyUrl = `https://api.zenrows.com/v1/?api_key=${apiKey}&url=${encodeURIComponent(targetUrl)}&js_render=true&antibot=true`;
 
     try {
-        console.log("Fetching Yad2 page via ScraperAPI (Anti-Bot Enabled)...");
+        console.log("Fetching Yad2 page via ZenRows Anti-Bot...");
         const res = await fetch(proxyUrl);
 
         if (!res.ok) {
-            console.error(`ScraperAPI returned status: ${res.status}`);
+            console.error(`ZenRows returned status: ${res.status}`);
             const errText = await res.text();
             console.error("Response details:", errText.substring(0, 200));
             return null;
@@ -59,7 +59,7 @@ const getYad2Response = async (targetUrl) => {
 
         return await res.text();
     } catch (err) {
-        console.error("Fetch error via ScraperAPI:", err.message);
+        console.error("Fetch error via ZenRows:", err.message);
         return null;
     }
 };
