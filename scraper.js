@@ -43,13 +43,13 @@ const getYad2Response = async (targetUrl) => {
         return null;
     }
 
-    // הדפסת אורך המפתח בלבד לבדיקה שהוא נטען ולא ריק
     console.log(`Loaded API Key successfully (length: ${apiKey.length} chars)`);
 
-    const proxyUrl = `https://api.zenrows.com/v1/?url=${encodeURIComponent(targetUrl)}&js_render=true&antibot=true`;
+    // הוספת premium_proxy=true ו-js_render=true לעקיפת Radware ב-Yad2
+    const proxyUrl = `https://api.zenrows.com/v1/?url=${encodeURIComponent(targetUrl)}&js_render=true&premium_proxy=true`;
 
     try {
-        console.log("Fetching Yad2 page via ZenRows Anti-Bot...");
+        console.log("Fetching Yad2 page via ZenRows Anti-Bot + Premium Proxy...");
         const res = await fetch(proxyUrl, {
             headers: {
                 "X-API-KEY": apiKey.trim()
@@ -59,7 +59,7 @@ const getYad2Response = async (targetUrl) => {
         if (!res.ok) {
             console.error(`ZenRows returned status: ${res.status}`);
             const errText = await res.text();
-            console.error("Response details:", errText.substring(0, 200));
+            console.error("Response details:", errText.substring(0, 300));
             return null;
         }
 
