@@ -25,13 +25,13 @@ jobs:
           git config user.email "${{ secrets.GIT_CONFIG_EMAIL }}"
       
       - name: Run scraper
-        run: |
-          export API_TOKEN=${{ secrets.API_TOKEN }}
-          export CHAT_ID=${{ secrets.CHAT_ID }}
-          export API_URL=${{ secrets.API_URL }}
-          export API_KEY=${{ secrets.API_KEY }}
-          export SCRAPER_API_KEY=${{ secrets.SCRAPER_API_KEY }}
-          yarn scrape
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          API_URL: ${{ secrets.API_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
+        run: yarn scrape
 
       - name: Push new json data if needed
         run: |
