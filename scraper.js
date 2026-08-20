@@ -36,19 +36,25 @@ const sendToRailwayAPI = async (imgUrl, topic, pageUrl) => {
 };
 
 const getYad2Response = async (targetUrl) => {
-    // טוען את המפתח מ-SCRAPER_API_KEY או מ-ZENROWS_API_KEY
     const apiKey = process.env.SCRAPER_API_KEY || process.env.ZENROWS_API_KEY;
 
     if (!apiKey) {
-        console.error("⚠️ API Key is missing! Check your GitHub Secrets (SCRAPER_API_KEY).");
+        console.error("⚠️ API Key is missing! Check your GitHub Secrets configuration.");
         return null;
     }
 
-    const proxyUrl = `https://api.zenrows.com/v1/?api_key=${apiKey.trim()}&url=${encodeURIComponent(targetUrl)}&js_render=true&antibot=true`;
+    // הדפסת אורך המפתח בלבד לבדיקה שהוא נטען ולא ריק
+    console.log(`Loaded API Key successfully (length: ${apiKey.length} chars)`);
+
+    const proxyUrl = `https://api.zenrows.com/v1/?url=${encodeURIComponent(targetUrl)}&js_render=true&antibot=true`;
 
     try {
         console.log("Fetching Yad2 page via ZenRows Anti-Bot...");
-        const res = await fetch(proxyUrl);
+        const res = await fetch(proxyUrl, {
+            headers: {
+                "X-API-KEY": apiKey.trim()
+            }
+        });
 
         if (!res.ok) {
             console.error(`ZenRows returned status: ${res.status}`);
