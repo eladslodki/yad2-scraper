@@ -31,7 +31,7 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
           API_KEY: ${{ secrets.API_KEY }}
           SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
-        run: yarn scrape
+        run: node scraper.js
 
       - name: Push new json data if needed
         run: |
