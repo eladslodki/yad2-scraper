@@ -113,7 +113,36 @@ const program = async () => {
         return !project.disabled;
     }).map(async project => {
         await scrape(project.topic, project.url)
+
     }))
 };
+async function sendToRailwayAPI(item) {
+  const apiUrl = process.env.API_URL;
+  const apiKey = process.env.API_KEY;
+
+  if (!apiUrl || !apiKey) return;
+
+  const payload = {
+    yad2_url: item.link || item.url || item.itemUrl,
+    title: item.title || item.subject || item.heading,
+    price: parseInt(item.price) || 0,
+    description: item.description || item.text || "",
+    city: item.city || item.address || ""
+  };
+
+  try {
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+    console.log(`Sent item to Railway API, status: ${res.status}`);
+  } catch (err) {
+    console.error("Failed sending item to Railway API:", err);
+  }
+}
 
 program();
