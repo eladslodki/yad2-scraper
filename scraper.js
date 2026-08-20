@@ -35,16 +35,28 @@ const sendToRailwayAPI = async (imgUrl, topic, pageUrl) => {
     }
 };
 
-const getYad2Response = async (url) => {
-    const requestOptions = {
-        method: 'GET',
-        redirect: 'follow'
-    };
+const getYad2Response = async (targetUrl) => {
+    const scraperApiKey = process.env.SCRAPER_API_KEY;
+
+    if (!scraperApiKey) {
+        console.error("⚠️ SCRAPER_API_KEY is missing in environment variables!");
+        return null;
+    }
+
+    // ניתוח הבקשה דרך ה-Proxy של ScraperAPI עם עקיפת הרינדור
+    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
+
     try {
-        const res = await fetch(url, requestOptions);
+        console.log("Fetching Yad2 page via ScraperAPI...");
+        const res = await fetch(proxyUrl);
+        if (!res.ok) {
+            console.error(`ScraperAPI returned status: ${res.status}`);
+            return null;
+        }
         return await res.text();
     } catch (err) {
-        console.log(err);
+        console.error("Fetch error via ScraperAPI:", err.message);
+        return null;
     }
 };
 
