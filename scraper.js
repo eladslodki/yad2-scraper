@@ -3,18 +3,50 @@ const Telenode = require('telenode-js');
 const fs = require('fs');
 const config = require('./config.json');
 
+const sendToRailwayAPI = async (imgUrl, topic, pageUrl) => {
+    const apiUrl = process.env.API_URL;
+    const apiKey = process.env.API_KEY;
+
+    if (!apiUrl || !apiKey) {
+        console.log("API_URL or API_KEY missing in environment variables. Skipping Railway API push.");
+        return;
+    }
+
+    const payload = {
+        yad2_url: pageUrl,
+        title: topic, // משתמשים בשם הנושא מההגדרות ככותרת
+        price: 0,     // Claude בשרת שלכם ינסה לחלץ את המחיר והמפרט לבד
+        description: `Scraped from image URL: ${imgUrl}`,
+        city: ""
+    };
+
+    try {
+        const res = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-API-Key": apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+        console.log(`Sent item to Railway API, status: ${res.status}`);
+    } catch (err) {
+        console.error("Failed sending item to Railway API:", err);
+    }
+};
+
 const getYad2Response = async (url) => {
     const requestOptions = {
         method: 'GET',
         redirect: 'follow'
     };
     try {
-        const res = await fetch(url, requestOptions)
-        return await res.text()
+        const res = await fetch(url, requestOptions);
+        return await res.text();
     } catch (err) {
-        console.log(err)
+        console.log(err);
     }
-}
+};
 
 const scrapeItemsAndExtractImgUrls = async (url) => {
     const yad2Html = await getYad2Response(url);
@@ -22,24 +54,24 @@ const scrapeItemsAndExtractImgUrls = async (url) => {
         throw new Error("Could not get Yad2 response");
     }
     const $ = cheerio.load(yad2Html);
-    const title = $("title")
+    const title = $("title");
     const titleText = title.first().text();
     if (titleText === "ShieldSquare Captcha") {
-        throw new Error("Bot detection");
+        throw new Error("Bot detection (Captcha hit)");
     }
     const $feedItems = $(".feeditem").find(".pic");
     if (!$feedItems) {
         throw new Error("Could not find feed items");
     }
-    const imageUrls = []
+    const imageUrls = [];
     $feedItems.each((_, elm) => {
         const imgSrc = $(elm).find("img").attr('src');
         if (imgSrc) {
-            imageUrls.push(imgSrc)
+            imageUrls.push(imgSrc);
         }
-    })
+    });
     return imageUrls;
-}
+};
 
 const checkIfHasNewItem = async (imgUrls, topic) => {
     const filePath = `./data/${topic}.json`;
@@ -48,7 +80,9 @@ const checkIfHasNewItem = async (imgUrls, topic) => {
         savedUrls = require(filePath);
     } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
-            fs.mkdirSync('data');
+            if (!fs.existsSync('data')) {
+                fs.mkdirSync('data');
+            }
             fs.writeFileSync(filePath, '[]');
         } else {
             console.log(e);
@@ -74,75 +108,53 @@ const checkIfHasNewItem = async (imgUrls, topic) => {
         await createPushFlagForWorkflow();
     }
     return newItems;
-}
+};
 
 const createPushFlagForWorkflow = () => {
-    fs.writeFileSync("push_me", "")
-}
+    fs.writeFileSync("push_me", "");
+};
 
 const scrape = async (topic, url) => {
     const apiToken = process.env.API_TOKEN || config.telegramApiToken;
     const chatId = process.env.CHAT_ID || config.chatId;
-    const telenode = new Telenode({apiToken})
+    const telenode = new Telenode({ apiToken });
     try {
-        await telenode.sendTextMessage(`Starting scanning ${topic} on link:\n${url}`, chatId)
+        console.log(`Starting scan for: ${topic}`);
         const scrapeImgResults = await scrapeItemsAndExtractImgUrls(url);
         const newItems = await checkIfHasNewItem(scrapeImgResults, topic);
+        
         if (newItems.length > 0) {
-            const newItemsJoined = newItems.join("\n----------\n");
-            const msg = `${newItems.length} new items:\n${newItemsJoined}`
-            await telenode.sendTextMessage(msg, chatId);
+            console.log(`Found ${newItems.length} new items!`);
+            
+            // לשלוח ל-Telegram במידה והוגדר
+            if (apiToken && chatId) {
+                const newItemsJoined = newItems.join("\n----------\n");
+                const msg = `${newItems.length} new items found for ${topic}:\n${newItemsJoined}`;
+                await telenode.sendTextMessage(msg, chatId);
+            }
+
+            // *** שליחה אקטיבית ל-Railway API ***
+            for (const itemImgUrl of newItems) {
+                await sendToRailwayAPI(itemImgUrl, topic, url);
+            }
+
         } else {
-            await telenode.sendTextMessage("No new items were added", chatId);
+            console.log("No new items were added.");
         }
     } catch (e) {
         let errMsg = e?.message || "";
-        if (errMsg) {
-            errMsg = `Error: ${errMsg}`
+        console.error(`Scan workflow failed for ${topic}:`, errMsg);
+        if (apiToken && chatId) {
+            await telenode.sendTextMessage(`Scan workflow failed for ${topic}... 😥\n${errMsg}`, chatId);
         }
-        await telenode.sendTextMessage(`Scan workflow failed... 😥\n${errMsg}`, chatId)
-        throw new Error(e)
     }
-}
+};
 
 const program = async () => {
-    await Promise.all(config.projects.filter(project => {
-        if (project.disabled) {
-            console.log(`Topic "${project.topic}" is disabled. Skipping.`);
-        }
-        return !project.disabled;
-    }).map(async project => {
-        await scrape(project.topic, project.url)
-
-    }))
+    const activeProjects = config.projects.filter(project => !project.disabled);
+    for (const project of activeProjects) {
+        await scrape(project.topic, project.url);
+    }
 };
-async function sendToRailwayAPI(item) {
-  const apiUrl = process.env.API_URL;
-  const apiKey = process.env.API_KEY;
-
-  if (!apiUrl || !apiKey) return;
-
-  const payload = {
-    yad2_url: item.link || item.url || item.itemUrl,
-    title: item.title || item.subject || item.heading,
-    price: parseInt(item.price) || 0,
-    description: item.description || item.text || "",
-    city: item.city || item.address || ""
-  };
-
-  try {
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey
-      },
-      body: JSON.stringify(payload)
-    });
-    console.log(`Sent item to Railway API, status: ${res.status}`);
-  } catch (err) {
-    console.error("Failed sending item to Railway API:", err);
-  }
-}
 
 program();
