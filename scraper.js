@@ -76,27 +76,27 @@ const scrapeItemsAndExtractImgUrls = async (url) => {
         console.warn("⚠️ Could not get Yad2 response (Empty HTML)");
         return [];
     }
-    
+
     const $ = cheerio.load(yad2Html);
     const titleText = $("title").first().text().trim();
     console.log(`Page title received from Yad2: "${titleText}"`);
-    
-    if (titleText.includes("Captcha") || titleText.includes("ShieldSquare") || titleText.includes("Access Denied")) {
-        console.warn("⚠️ Yad2 blocked the request with Captcha/Bot detection!");
-        return [];
-    }
-
-    const $feedItems = $(".feeditem").find(".pic");
-    console.log(`Found ${$feedItems.length} feed item pictures on page.`);
 
     const imageUrls = [];
-    $feedItems.each((_, elm) => {
-        const imgSrc = $(elm).find("img").attr('src');
-        if (imgSrc) {
+
+    // סריקה לפי הסלקטורים המעודכנים של יד2 (תמיכה במבנה ה-React החדש והישן)
+    $('[data-testid="feed-item"], .feeditem, [class*="feed_item"], [class*="feedItem"]').each((_, item) => {
+        const $item = $(item);
+        
+        // חיפוש תמונות בתוך המודעה
+        const imgSrc = $item.find('img[src*="yad2"], img[src*="y2"]').attr('src') || 
+                       $item.find('img').attr('src');
+
+        if (imgSrc && !imgSrc.includes('placeholder') && !imgSrc.includes('avatar')) {
             imageUrls.push(imgSrc);
         }
     });
 
+    console.log(`Found ${imageUrls.length} valid item pictures on page.`);
     return imageUrls;
 };
 
