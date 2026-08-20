@@ -43,16 +43,23 @@ const getYad2Response = async (targetUrl) => {
         return null;
     }
 
-    // ניתוח הבקשה דרך ה-Proxy של ScraperAPI עם עקיפת הרינדור
-    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
+    // שימוש בפרמטר ultra_premium=true ו-keep_headers לעקיפת Radware
+    const proxyUrl = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(targetUrl)}&ultra_premium=true`;
 
     try {
-        console.log("Fetching Yad2 page via ScraperAPI...");
-        const res = await fetch(proxyUrl);
+        console.log("Fetching Yad2 page via ScraperAPI (Ultra Premium)...");
+        const res = await fetch(proxyUrl, {
+            headers: {
+                "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            }
+        });
+
         if (!res.ok) {
             console.error(`ScraperAPI returned status: ${res.status}`);
             return null;
         }
+
         return await res.text();
     } catch (err) {
         console.error("Fetch error via ScraperAPI:", err.message);
