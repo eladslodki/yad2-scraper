@@ -51,18 +51,22 @@ const getYad2Response = async (url) => {
 const scrapeItemsAndExtractImgUrls = async (url) => {
     const yad2Html = await getYad2Response(url);
     if (!yad2Html) {
-        throw new Error("Could not get Yad2 response");
+        console.warn("⚠️ Could not get Yad2 response (Empty HTML)");
+        return [];
     }
+    
     const $ = cheerio.load(yad2Html);
-    const title = $("title");
-    const titleText = title.first().text();
-    if (titleText === "ShieldSquare Captcha") {
-        throw new Error("Bot detection (Captcha hit)");
+    const titleText = $("title").first().text().trim();
+    console.log(`Page title received from Yad2: "${titleText}"`);
+    
+    if (titleText.includes("Captcha") || titleText.includes("ShieldSquare") || titleText.includes("Access Denied")) {
+        console.warn("⚠️ Yad2 blocked the request with Captcha/Bot detection!");
+        return [];
     }
+
     const $feedItems = $(".feeditem").find(".pic");
-    if (!$feedItems) {
-        throw new Error("Could not find feed items");
-    }
+    console.log(`Found ${$feedItems.length} feed item pictures on page.`);
+
     const imageUrls = [];
     $feedItems.each((_, elm) => {
         const imgSrc = $(elm).find("img").attr('src');
@@ -70,6 +74,7 @@ const scrapeItemsAndExtractImgUrls = async (url) => {
             imageUrls.push(imgSrc);
         }
     });
+
     return imageUrls;
 };
 
